@@ -100,9 +100,9 @@ func IterateForAssignment(ipnet net.IPNet, rangeStart net.IP, rangeEnd net.IP, r
 		rangeStart, rangeEnd, ipnet, firstIP, lastIP)
 
 	// Build reserved map.
-	reserved := make(map[string]bool)
+	reserved := make(map[string]string)
 	for _, r := range reserveList {
-		reserved[r.IP.String()] = true
+		reserved[r.IP.String()] = r.PodRef
 	}
 
 	// Build excluded list, "192.168.2.229/30", "192.168.1.229/30".
@@ -119,8 +119,11 @@ func IterateForAssignment(ipnet net.IPNet, rangeStart net.IP, rangeEnd net.IP, r
 	// within ipnet, and make sure that ip is smaller than lastIP.
 	for ip := firstIP; ipnet.Contains(ip) && iphelpers.CompareIPs(ip, lastIP) <= 0; ip = iphelpers.IncIP(ip) {
 		// If already reserved, skip it.
-		if reserved[ip.String()] {
-			continue
+		if reserved[ip.String()] != "" {
+			if reserved[ip.String()] != podRef {
+				continue
+			}
+			logging.Debugf("Found existing reservation %v with matching podRef %s", i.String(), podRef)
 		}
 		// If this IP is within the range of one of the excluded subnets, jump to the exluded subnet's broadcast address
 		// and skip.
